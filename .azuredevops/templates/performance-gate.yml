@@ -1,0 +1,38 @@
+parameters:
+  - name: baseline
+    type: string
+  - name: candidate
+    type: string
+  - name: report
+    type: string
+  - name: htmlReport
+    type: string
+  - name: baselineFormat
+    type: string
+    default: jmeter
+    values:
+      - jmeter
+      - k6
+  - name: candidateFormat
+    type: string
+    default: jmeter
+    values:
+      - jmeter
+      - k6
+
+steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.x'
+    displayName: 'Seleccionar Python'
+
+  - script: |
+      python tools/perfGate.py \
+        --baseline "${{ parameters.baseline }}" \
+        --candidate "${{ parameters.candidate }}" \
+        --baseline-format "${{ parameters.baselineFormat }}" \
+        --candidate-format "${{ parameters.candidateFormat }}" \
+        --config perf-gate.json \
+        --report "${{ parameters.report }}" \
+        --html-report "${{ parameters.htmlReport }}"
+    displayName: 'Comparar performance contra producción'
