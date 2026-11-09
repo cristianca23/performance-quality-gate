@@ -1,0 +1,52 @@
+trigger:
+  - main
+
+pool:
+  vmImage: ubuntu-latest
+
+jobs:
+  - job: UnitTests
+    displayName: 'Pruebas del quality gate'
+    steps:
+      - checkout: self
+      - task: UsePythonVersion@0
+        inputs:
+          versionSpec: '3.x'
+      - script: python -m unittest discover -s tests -v
+        displayName: 'Ejecutar pruebas automatizadas'
+
+  - job: VersionA
+    displayName: 'Evaluar versión A'
+    dependsOn: UnitTests
+    steps:
+      - checkout: self
+      - template: .azuredevops/templates/performance-gate.yml
+        parameters:
+          baseline: data/produccion-actual.csv
+          candidate: data/version-a.csv
+          report: artifacts/version-a.md
+          htmlReport: artifacts/version-a.html
+      - task: PublishPipelineArtifact@1
+        displayName: 'Publicar reportes de versión A'
+        condition: always()
+        inputs:
+          targetPath: artifacts
+          artifact: reporte-version-a
+
+  - job: VersionB
+    displayName: 'Evaluar versión B'
+    dependsOn: UnitTests
+    steps:
+      - checkout: self
+      - template: .azuredevops/templates/performance-gate.yml
+        parameters:
+          baseline: data/produccion-actual.csv
+          candidate: data/version-b.csv
+          report: artifacts/version-b.md
+          htmlReport: artifacts/version-b.html
+      - task: PublishPipelineArtifact@1
+        displayName: 'Publicar reportes de versión B'
+        condition: always()
+        inputs:
+          targetPath: artifacts
+          artifact: reporte-version-b

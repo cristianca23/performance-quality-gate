@@ -1,0 +1,7 @@
+{
+  "defaults": {
+    "maxP95RegressionPct": 10,
+    "maxErrorRatePct": 1,
+    "minSamples": 30
+  }
+}
