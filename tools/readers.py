@@ -4,6 +4,7 @@ import csv
 import json
 import math
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 
@@ -11,6 +12,22 @@ from pathlib import Path
 class requestSample:
     elapsed_ms: float
     failed: bool
+    timestamp_ms: float = 0
+
+    @property
+    def duration_ms(self) -> float:
+        # El reporte de línea de tiempo lee duration_ms, igual que el elapsed de JMeter.
+        return self.elapsed_ms
+
+
+def timestamp_ms(value: str) -> float:
+    try:
+        moment = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError(f"Timestamp inválido: {value}") from exc
+    if moment.tzinfo is None:
+        raise ValueError(f"Timestamp sin zona horaria: {value}")
+    return moment.timestamp() * 1000
 
 
 def load_csv(path: Path) -> dict[str, list[requestSample]]:
@@ -52,7 +69,18 @@ def load_csv(path: Path) -> dict[str, list[requestSample]]:
                     f"{path}, línea {line_number}: success debe ser true o false."
                 )
             failed = success_value == "false" or response_code >= 400
-            grouped.setdefault(label, []).append(requestSample(elapsed_ms, failed))
+            if "timeStamp" in (reader.fieldnames or []):
+                try:
+                    started_ms = float(row["timeStamp"])
+                except (TypeError, ValueError) as exc:
+                    raise ValueError(f"{path}, línea {line_number}: timeStamp inválido.") from exc
+                if not math.isfinite(started_ms) or started_ms < 0:
+                    raise ValueError(
+                        f"{path}, línea {line_number}: timeStamp debe ser un número finito no negativo."
+                    )
+            else:
+                started_ms = 0
+            grouped.setdefault(label, []).append(requestSample(elapsed_ms, failed, started_ms))
 
     if not grouped:
         raise ValueError(f"{path} no contiene peticiones.")
@@ -112,7 +140,17 @@ def load_k6_json(path: Path) -> dict[str, list[requestSample]]:
             if status_code != 0 and not 100 <= status_code <= 599:
                 raise ValueError(f"{location}: status debe ser 0 o un código HTTP entre 100 y 599.")
             failed = expected_response == "false" or status_code == 0 or status_code >= 400
-            grouped.setdefault(name.strip(), []).append(requestSample(float(duration), failed))
+            raw_time = data.get("time")
+            if isinstance(raw_time, str) and raw_time.strip():
+                # k6 marca el fin de la petición. Se resta la duración para alinear el inicio con JMeter.
+                started_ms = timestamp_ms(raw_time) - float(duration)
+                if started_ms < 0:
+                    raise ValueError(f"{location}: el inicio calculado de la petición es negativo.")
+            else:
+                started_ms = 0
+            grouped.setdefault(name.strip(), []).append(
+                requestSample(float(duration), failed, started_ms)
+            )
 
     if not grouped:
         raise ValueError(f"{path} no contiene puntos http_req_duration de k6.")

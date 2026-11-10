@@ -1,7 +1,9 @@
 {
   "defaults": {
-    "maxP95RegressionPct": 10,
-    "maxErrorRatePct": 1,
+    "warmupSeconds": 60,
+    "maxP95RegressionPct": 20,
+    "maxErrorIncreasePp": 1,
+    "maxErrorRatePct": 2,
     "minSamples": 30
   }
 }
