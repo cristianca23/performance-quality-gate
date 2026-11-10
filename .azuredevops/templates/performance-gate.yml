@@ -19,6 +19,16 @@ parameters:
     values:
       - jmeter
       - k6
+  - name: warmupSeconds
+    type: number
+  - name: maxP95RegressionPct
+    type: number
+  - name: maxErrorIncreasePp
+    type: number
+  - name: maxErrorRatePct
+    type: number
+  - name: minSamples
+    type: number
 
 steps:
   - task: UsePythonVersion@0
@@ -33,6 +43,11 @@ steps:
         --baseline-format "${{ parameters.baselineFormat }}" \
         --candidate-format "${{ parameters.candidateFormat }}" \
         --config perf-gate.json \
+        --warmup-seconds "${{ parameters.warmupSeconds }}" \
+        --max-p95-regression-pct "${{ parameters.maxP95RegressionPct }}" \
+        --max-error-increase-pp "${{ parameters.maxErrorIncreasePp }}" \
+        --max-error-rate-pct "${{ parameters.maxErrorRatePct }}" \
+        --min-samples "${{ parameters.minSamples }}" \
         --report "${{ parameters.report }}" \
         --html-report "${{ parameters.htmlReport }}"
     displayName: 'Comparar performance contra producción'

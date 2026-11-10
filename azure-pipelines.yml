@@ -8,6 +8,26 @@ parameters:
     values:
       - A
       - B
+  - name: warmupSeconds
+    displayName: Segundos de estabilización
+    type: number
+    default: 60
+  - name: maxP95RegressionPct
+    displayName: Aumento máximo del p95 frente a producción (%)
+    type: number
+    default: 20
+  - name: maxErrorIncreasePp
+    displayName: Aumento máximo de error (porcentaje)
+    type: number
+    default: 1
+  - name: maxErrorRatePct
+    displayName: Tope de error (%)
+    type: number
+    default: 2
+  - name: minSamples
+    displayName: Mínimo de muestras para el análisis
+    type: number
+    default: 30
 
 trigger:
   - main
@@ -37,6 +57,11 @@ jobs:
           candidate: data/version-${{ lower(parameters.version) }}.csv
           report: $(Build.SourcesDirectory)/artifacts/version-${{ lower(parameters.version) }}.md
           htmlReport: $(Build.SourcesDirectory)/artifacts/version-${{ lower(parameters.version) }}.html
+          warmupSeconds: ${{ parameters.warmupSeconds }}
+          maxP95RegressionPct: ${{ parameters.maxP95RegressionPct }}
+          maxErrorIncreasePp: ${{ parameters.maxErrorIncreasePp }}
+          maxErrorRatePct: ${{ parameters.maxErrorRatePct }}
+          minSamples: ${{ parameters.minSamples }}
       - script: |
           REPORT="$(Build.SourcesDirectory)/artifacts/version-${{ lower(parameters.version) }}.md"
           if [ -f "$REPORT" ]; then

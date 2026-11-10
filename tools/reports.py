@@ -44,13 +44,6 @@ def markdown_report(result):
     for endpoint in result["endpoints"]:
         if endpoint["status"] != "PASS":
             lines.append(f"- **{safe(endpoint['message'])}** {safe(endpoint['recommendation'])}")
-    lines.extend(
-        [
-            "",
-            "PASS con advertencias no aprueba endpoints sin evidencia suficiente. No sustituye la decisión de release ni el control SOX.",
-            "",
-        ]
-    )
     return "\n".join(lines)
 
 

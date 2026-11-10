@@ -1,113 +1,20 @@
 from __future__ import annotations
 
 import argparse
-import math
 import sys
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from readers import requestSample, load_csv, load_results
+from config import apply_default_overrides, read_config
+from metrics import apply_warmup, metrics
+from readers import load_results, requestSample
 from reports import fmt, html_report, markdown_report
-
-
-@dataclass(frozen=True)
-class performanceMetrics:
-    samples: int
-    p50_ms: float
-    p95_ms: float
-    p99_ms: float
-    failed_samples: int
-    error_rate_pct: float
-
-
-def percentile(values: list[float], percentile_value: float) -> float:
-    ordered = sorted(values)
-    position = (len(ordered) - 1) * percentile_value
-    lower = math.floor(position)
-    upper = math.ceil(position)
-    return ordered[lower] + (ordered[upper] - ordered[lower]) * (position - lower)
-
-
-def metrics(samples: list[requestSample]) -> performanceMetrics:
-    durations = [sample.elapsed_ms for sample in samples]
-    failed_samples = sum(sample.failed for sample in samples)
-    return performanceMetrics(
-        samples=len(samples),
-        p50_ms=percentile(durations, 0.50),
-        p95_ms=percentile(durations, 0.95),
-        p99_ms=percentile(durations, 0.99),
-        failed_samples=failed_samples,
-        error_rate_pct=failed_samples / len(samples) * 100,
-    )
-
-
-def read_config(path: Path) -> dict[str, Any]:
-    import json
-
-    try:
-        config = json.loads(path.read_text(encoding="utf-8"))
-    except OSError as exc:
-        raise ValueError(f"No se pudo leer la configuración {path}: {exc}") from exc
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"JSON inválido en {path}, línea {exc.lineno}: {exc.msg}") from exc
-
-    if not isinstance(config, dict) or not isinstance(config.get("defaults"), dict):
-        raise ValueError("La configuración debe incluir el objeto 'defaults'.")
-    if "endpoints" in config and not isinstance(config["endpoints"], dict):
-        raise ValueError("'endpoints' debe ser un objeto JSON.")
-
-    defaults = config["defaults"]
-    for key in ("maxP95RegressionPct", "maxErrorRatePct", "minSamples"):
-        if key not in defaults:
-            raise ValueError(f"Falta el límite por defecto '{key}'.")
-    validate_rule("defaults", defaults)
-    for endpoint, rule in config.get("endpoints", {}).items():
-        if not isinstance(rule, dict):
-            raise ValueError(f"La regla para '{endpoint}' debe ser un objeto JSON.")
-        validate_rule(endpoint, rule)
-    return config
-
-
-def validate_rule(name: str, rule: dict[str, Any]) -> None:
-    for key in ("maxP95RegressionPct", "maxErrorRatePct", "maxErrorIncreasePp", "warmupSeconds"):
-        if key in rule:
-            value = rule[key]
-            if isinstance(value, bool) or not isinstance(value, (int, float)):
-                raise ValueError(f"{name}.{key} debe ser un número no negativo.")
-            if not math.isfinite(value) or value < 0:
-                raise ValueError(f"{name}.{key} debe ser un número finito no negativo.")
-    if "minSamples" in rule:
-        value = rule["minSamples"]
-        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
-            raise ValueError(f"{name}.minSamples debe ser un entero positivo.")
 
 
 def _sample_count(grouped: dict[str, list[requestSample]]) -> int:
     return sum(len(samples) for samples in grouped.values())
-
-
-def apply_warmup(
-    grouped: dict[str, list[requestSample]], warmup_seconds: float
-) -> tuple[dict[str, list[requestSample]], int]:
-    """Quita el mismo arranque en cada corrida, anclado al timestamp mínimo.
-
-    Si el archivo no trae tiempos distintos, no descarta nada: los tests sintéticos
-    y un export sin reloj siguen siendo comparables.
-    """
-    stamps = [sample.timestamp_ms for samples in grouped.values() for sample in samples]
-    if warmup_seconds <= 0 or not stamps or max(stamps) == min(stamps):
-        return grouped, 0
-    cutoff = min(stamps) + warmup_seconds * 1000
-    filtered: dict[str, list[requestSample]] = {}
-    excluded = 0
-    for endpoint, samples in grouped.items():
-        kept = [sample for sample in samples if sample.timestamp_ms >= cutoff]
-        excluded += len(samples) - len(kept)
-        filtered[endpoint] = kept
-    return filtered, excluded
 
 
 def _metrics_dict(samples: list[requestSample] | None) -> dict[str, float] | None:
@@ -320,12 +227,30 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--config", required=True, type=Path, help="Configuración JSON")
     parser.add_argument("--report", type=Path, help="Ruta para guardar el reporte Markdown")
     parser.add_argument("--html-report", type=Path, help="Ruta para guardar el reporte HTML")
+    parser.add_argument("--warmup-seconds", type=float, help="Reemplaza defaults.warmupSeconds")
+    parser.add_argument(
+        "--max-p95-regression-pct", type=float, help="Reemplaza defaults.maxP95RegressionPct"
+    )
+    parser.add_argument(
+        "--max-error-increase-pp", type=float, help="Reemplaza defaults.maxErrorIncreasePp"
+    )
+    parser.add_argument("--max-error-rate-pct", type=float, help="Reemplaza defaults.maxErrorRatePct")
+    parser.add_argument("--min-samples", type=int, help="Reemplaza defaults.minSamples")
     args = parser.parse_args(argv)
 
     try:
         baseline = load_results(args.baseline, args.baseline_format)
         candidate = load_results(args.candidate, args.candidate_format)
-        config = read_config(args.config)
+        config = apply_default_overrides(
+            read_config(args.config),
+            {
+                "warmupSeconds": args.warmup_seconds,
+                "maxP95RegressionPct": args.max_p95_regression_pct,
+                "maxErrorIncreasePp": args.max_error_increase_pp,
+                "maxErrorRatePct": args.max_error_rate_pct,
+                "minSamples": args.min_samples,
+            },
+        )
         warmup_seconds = config["defaults"].get("warmupSeconds", 0)
         _, baseline_excluded = apply_warmup(baseline, warmup_seconds)
         _, candidate_excluded = apply_warmup(candidate, warmup_seconds)
