@@ -24,7 +24,7 @@ jobs:
         inputs:
           versionSpec: '3.x'
       - script: python -m unittest discover -s tests -v
-        displayName: 'Ejecutar pruebas automatizadas'
+        displayName: 'Ejecutar pruebas unitarias'
 
   - job: Evaluate
     displayName: 'Evaluar versión ${{ parameters.version }}'
@@ -42,7 +42,7 @@ jobs:
           if [ -f "$REPORT" ]; then
             echo "##vso[task.uploadsummary]$REPORT"
           fi
-        displayName: 'Mostrar reporte en el resumen'
+        displayName: 'Visualizar reporte'
         condition: always()
       - task: PublishPipelineArtifact@1
         displayName: 'Publicar reportes de versión ${{ parameters.version }}'
@@ -50,3 +50,9 @@ jobs:
         inputs:
           targetPath: $(Build.SourcesDirectory)/artifacts
           artifact: reporte-version-${{ lower(parameters.version) }}
+      - task: PublishHtmlTab@1
+        displayName: 'Publicar reporte HTML'
+        condition: always()
+        inputs:
+          reportDir: $(Build.SourcesDirectory)/artifacts/version-${{ lower(parameters.version) }}.html
+          tabName: Quality gate ${{ parameters.version }}
