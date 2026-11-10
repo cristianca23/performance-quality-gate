@@ -1,0 +1,9 @@
+trigger: none
+
+pool:
+  vmImage: ubuntu-24.04
+
+steps:
+  - checkout: none
+  - script: echo "Agente hospedado funcionando"
+    displayName: Comprobar asignación de agente
