@@ -1,3 +1,14 @@
+name: ${{ parameters.version }}-$(Date:yyyyMMdd)$(Rev:.r)
+
+parameters:
+  - name: version
+    displayName: Cambio a evaluar
+    type: string
+    default: A
+    values:
+      - A
+      - B
+
 trigger:
   - main
 
@@ -15,38 +26,27 @@ jobs:
       - script: python -m unittest discover -s tests -v
         displayName: 'Ejecutar pruebas automatizadas'
 
-  - job: VersionA
-    displayName: 'Evaluar versión A'
+  - job: Evaluate
+    displayName: 'Evaluar versión ${{ parameters.version }}'
     dependsOn: UnitTests
     steps:
       - checkout: self
       - template: .azuredevops/templates/performance-gate.yml
         parameters:
           baseline: data/produccion-actual.csv
-          candidate: data/version-a.csv
-          report: artifacts/version-a.md
-          htmlReport: artifacts/version-a.html
+          candidate: data/version-${{ lower(parameters.version) }}.csv
+          report: $(Build.SourcesDirectory)/artifacts/version-${{ lower(parameters.version) }}.md
+          htmlReport: $(Build.SourcesDirectory)/artifacts/version-${{ lower(parameters.version) }}.html
+      - script: |
+          REPORT="$(Build.SourcesDirectory)/artifacts/version-${{ lower(parameters.version) }}.md"
+          if [ -f "$REPORT" ]; then
+            echo "##vso[task.uploadsummary]$REPORT"
+          fi
+        displayName: 'Mostrar reporte en el resumen'
+        condition: always()
       - task: PublishPipelineArtifact@1
-        displayName: 'Publicar reportes de versión A'
+        displayName: 'Publicar reportes de versión ${{ parameters.version }}'
         condition: always()
         inputs:
-          targetPath: artifacts
-          artifact: reporte-version-a
-
-  - job: VersionB
-    displayName: 'Evaluar versión B'
-    dependsOn: UnitTests
-    steps:
-      - checkout: self
-      - template: .azuredevops/templates/performance-gate.yml
-        parameters:
-          baseline: data/produccion-actual.csv
-          candidate: data/version-b.csv
-          report: artifacts/version-b.md
-          htmlReport: artifacts/version-b.html
-      - task: PublishPipelineArtifact@1
-        displayName: 'Publicar reportes de versión B'
-        condition: always()
-        inputs:
-          targetPath: artifacts
-          artifact: reporte-version-b
+          targetPath: $(Build.SourcesDirectory)/artifacts
+          artifact: reporte-version-${{ lower(parameters.version) }}
