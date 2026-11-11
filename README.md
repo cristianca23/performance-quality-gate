@@ -112,6 +112,10 @@ Cada publicación nueva exige subir `version` en el `vss-extension.json` corresp
 
 ![Pipeline QualityGate-Marketplace, publicación de las extensiones](docs/ejecuciones/Pipeline%20marketplace.png)
 
+En el Marketplace, bajo el publisher `cristianca23`, quedan las dos extensiones privadas y compartidas con la organización: **Performance Quality Gate** **1.0.7** y **Performance Quality Report** **1.0.3**.
+
+![Extensiones publicadas en el Marketplace](docs/ejecuciones/Extensiones.png)
+
 ## Referencias de Azure
 
 Microsoft documenta el modelo de extensiones en estos artículos:
