@@ -17,6 +17,12 @@ jobs:
       - script: python3 tools/packageExtension.py
         displayName: 'Empaquetar los .vsix'
       - script: |
+          set -euo pipefail
+          if [ -z "${AZURE_DEVOPS_EXT_PAT:-}" ]; then
+            echo "MarketplacePat no llegó al script. La variable del pipeline debe llamarse MarketplacePat."
+            exit 1
+          fi
+          echo "Token recibido (${#AZURE_DEVOPS_EXT_PAT} caracteres)."
           shopt -s nullglob
           files=(dist/*.vsix)
           if [ ${#files[@]} -eq 0 ]; then
@@ -27,7 +33,9 @@ jobs:
             echo "Publicando $vsix"
             npx --yes tfx-cli@0.21.1 extension publish \
               --vsix "$vsix" \
-              --share-with performance-quality-gate
+              --share-with performance-quality-gate \
+              --no-wait-validation \
+              </dev/null
           done
         displayName: 'Publicar en el Marketplace'
         env:
