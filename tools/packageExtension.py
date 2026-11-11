@@ -56,13 +56,19 @@ def create_vsix(stage_dir: Path, output: Path) -> Path:
         "--output-path",
         str(output),
     ]
+    before = {path.resolve(): path.stat().st_mtime for path in output.glob("*.vsix")}
     result = subprocess.run(command, cwd=stage_dir, check=False)
     if result.returncode != 0:
         raise SystemExit(result.returncode)
-    packages = sorted(stage_dir.rglob("*.vsix"))
-    if not packages:
-        raise SystemExit(f"tfx no dejó un .vsix en {stage_dir}.")
-    package = packages[-1]
+    created = [
+        path
+        for path in output.glob("*.vsix")
+        if before.get(path.resolve(), -1) < path.stat().st_mtime
+    ]
+    created.extend(stage_dir.rglob("*.vsix"))
+    if not created:
+        raise SystemExit(f"tfx no dejó un .vsix en {output}.")
+    package = max(created, key=lambda path: path.stat().st_mtime)
     target = output / package.name
     if package.resolve() != target.resolve():
         shutil.copy2(package, target)
