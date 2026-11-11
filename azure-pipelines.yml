@@ -17,6 +17,13 @@ jobs:
           versionSpec: '3.x'
       - script: python tools/packageExtension.py --output "$(Build.ArtifactStagingDirectory)/extension"
         displayName: 'Empaquetar la task'
+      - script: |
+          mkdir -p "$(Build.ArtifactStagingDirectory)/data"
+          cp data/produccion-actual.csv data/version-a.csv data/version-b.csv "$(Build.ArtifactStagingDirectory)/data/"
+        displayName: 'Empaquetar resultados JMeter'
       - publish: $(Build.ArtifactStagingDirectory)/extension
         artifact: performance-quality-gate
         displayName: 'Publicar la task'
+      - publish: $(Build.ArtifactStagingDirectory)/data
+        artifact: jmeter-results
+        displayName: 'Publicar resultados JMeter'
