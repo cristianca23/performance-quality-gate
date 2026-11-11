@@ -2,7 +2,7 @@
   "manifestVersion": 1,
   "id": "performance-quality-gate",
   "name": "Performance Quality Gate",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "cristianca23",
   "public": false,
   "targets": [

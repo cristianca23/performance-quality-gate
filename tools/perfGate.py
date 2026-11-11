@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import argparse
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
-from zoneinfo import ZoneInfo
+
+# Bogotá no cambia de horario. Un offset fijo evita depender de tzdata en agentes Windows.
+BOGOTA = timezone(timedelta(hours=-5))
 
 from config import apply_default_overrides, apply_endpoint_overrides, read_config, read_endpoint_overrides
 from metrics import apply_warmup, metrics
@@ -199,7 +201,7 @@ def build_report(
         "baseline": baseline_summary,
         "candidate": candidate_summary,
         "candidate_name": candidate_name,
-        "generated_at": datetime.now(ZoneInfo("America/Bogota")).isoformat(timespec="seconds"),
+        "generated_at": datetime.now(BOGOTA).isoformat(timespec="seconds"),
     }
 
 
