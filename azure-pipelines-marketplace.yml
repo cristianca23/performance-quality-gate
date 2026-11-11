@@ -31,11 +31,17 @@ jobs:
           fi
           for vsix in "${files[@]}"; do
             echo "Publicando $vsix"
-            npx --yes tfx-cli@0.21.1 extension publish \
+            output="$(npx --yes tfx-cli@0.21.1 extension publish \
               --vsix "$vsix" \
+              --token "$AZURE_DEVOPS_EXT_PAT" \
               --share-with performance-quality-gate \
               --no-wait-validation \
-              </dev/null
+              </dev/null 2>&1)"
+            printf '%s\n' "$output"
+            if ! printf '%s\n' "$output" | grep -qi 'published extension\|Completed operation'; then
+              echo "tfx terminó sin confirmar la publicación de $vsix."
+              exit 1
+            fi
           done
         displayName: 'Publicar en el Marketplace'
         env:
