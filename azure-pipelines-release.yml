@@ -1,105 +1,77 @@
-name: release-$(cambioAEvaluar)-$(Date:yyyyMMdd)$(Rev:.r)
+name: release-${{ parameters.version }}-$(Date:yyyyMMdd)$(Rev:.r)
 
 trigger: none
 pr: none
 
-resources:
-  pipelines:
-    - pipeline: build
-      source: performance-quality-gate
-      trigger: none
+parameters:
+  - name: version
+    displayName: Cambio a evaluar
+    type: string
+    default: A
+    values:
+      - A
+      - B
+  - name: warmupSeconds
+    displayName: Segundos de estabilización
+    type: number
+    default: 60
+  - name: maxP95RegressionPct
+    displayName: Aumento máximo del p95 frente a producción (%)
+    type: number
+    default: 20
+  - name: maxErrorIncreasePp
+    displayName: Aumento máximo de error (porcentaje)
+    type: number
+    default: 1
+  - name: maxErrorRatePct
+    displayName: Tope de error (%)
+    type: number
+    default: 2
+  - name: minSamples
+    displayName: Mínimo de muestras para el análisis
+    type: number
+    default: 30
+  - name: endpointsJson
+    displayName: Límites por endpoint (JSON)
+    type: string
+    default: '{}'
 
-variables:
-  cambioAEvaluar: A
-  warmupSeconds: 60
-  maxP95RegressionPct: 20
-  maxErrorIncreasePp: 1
-  maxErrorRatePct: 2
-  minSamples: 30
-  limitesPorEndpoint: |
-    {
-      "POST /pagos": {
-        "maxP95RegressionPct": 20,
-        "maxErrorIncreasePp": 1,
-        "maxErrorRatePct": 2,
-        "minSamples": 30
-      },
-      "POST /transferencias": {
-        "maxP95RegressionPct": 20,
-        "maxErrorIncreasePp": 1,
-        "maxErrorRatePct": 2,
-        "minSamples": 30
-      },
-      "GET /clientes": {
-        "maxP95RegressionPct": 20,
-        "maxErrorIncreasePp": 1,
-        "maxErrorRatePct": 2,
-        "minSamples": 30
-      },
-      "GET /reportes": {
-        "maxP95RegressionPct": 20,
-        "maxErrorIncreasePp": 1,
-        "maxErrorRatePct": 2,
-        "minSamples": 30
-      },
-      "Consultar saldo, cuenta ahorros": {
-        "maxP95RegressionPct": 20,
-        "maxErrorIncreasePp": 1,
-        "maxErrorRatePct": 2,
-        "minSamples": 30
-      }
-    }
+pool:
+  vmImage: ubuntu-latest
 
-stages:
-  - stage: Release
-    displayName: Release del quality gate
-    jobs:
-      - deployment: QualityGate
-        displayName: Evaluar con el validador publicado
-        pool:
-          vmImage: ubuntu-latest
-        environment: quality-gate
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-                - checkout: none
-                - download: build
-                  artifact: validator
-                - script: |
-                    python3 -c "import os; print('##vso[task.setvariable variable=versionKey]' + os.environ['CAMBIO'].strip().lower())"
-                  env:
-                    CAMBIO: $(cambioAEvaluar)
-                  displayName: Leer la versión configurada
-                - template: .azuredevops/templates/performance-gate.yml
-                  parameters:
-                    root: $(Pipeline.Workspace)/build/validator
-                    baseline: data/produccion-actual.csv
-                    candidate: data/version-$(versionKey).csv
-                    report: artifacts/version-$(versionKey).md
-                    htmlReport: artifacts/version-$(versionKey).html
-                    warmupSeconds: $(warmupSeconds)
-                    maxP95RegressionPct: $(maxP95RegressionPct)
-                    maxErrorIncreasePp: $(maxErrorIncreasePp)
-                    maxErrorRatePct: $(maxErrorRatePct)
-                    minSamples: $(minSamples)
-                    endpointsJson: $(limitesPorEndpoint)
-                - script: |
-                    REPORT="$(Pipeline.Workspace)/build/validator/artifacts/version-$(versionKey).md"
-                    if [ -f "$REPORT" ]; then
-                      echo "##vso[task.uploadsummary]$REPORT"
-                    fi
-                  displayName: Visualizar reporte
-                  condition: always()
-                - task: PublishPipelineArtifact@1
-                  displayName: Publicar reporte
-                  condition: always()
-                  inputs:
-                    targetPath: $(Pipeline.Workspace)/build/validator/artifacts
-                    artifact: reporte-version-$(versionKey)
-                - task: PublishHtmlTab@1
-                  displayName: Publicar reporte HTML
-                  condition: always()
-                  inputs:
-                    reportDir: $(Pipeline.Workspace)/build/validator/artifacts/version-$(versionKey).html
-                    tabName: Quality gate $(cambioAEvaluar)
+jobs:
+  - job: QualityGate
+    displayName: 'Evaluar versión ${{ parameters.version }}'
+    steps:
+      - checkout: self
+      - template: .azuredevops/templates/performance-gate.yml
+        parameters:
+          baseline: $(Build.SourcesDirectory)/data/produccion-actual.csv
+          candidate: $(Build.SourcesDirectory)/data/version-${{ lower(parameters.version) }}.csv
+          report: $(Build.SourcesDirectory)/artifacts/version-${{ lower(parameters.version) }}.md
+          htmlReport: $(Build.SourcesDirectory)/artifacts/version-${{ lower(parameters.version) }}.html
+          warmupSeconds: ${{ parameters.warmupSeconds }}
+          maxP95RegressionPct: ${{ parameters.maxP95RegressionPct }}
+          maxErrorIncreasePp: ${{ parameters.maxErrorIncreasePp }}
+          maxErrorRatePct: ${{ parameters.maxErrorRatePct }}
+          minSamples: ${{ parameters.minSamples }}
+          endpointsJson: ${{ parameters.endpointsJson }}
+      - script: |
+          REPORT="$(Build.SourcesDirectory)/artifacts/version-${{ lower(parameters.version) }}.md"
+          if [ -f "$REPORT" ]; then
+            echo "##vso[task.uploadsummary]$REPORT"
+          fi
+        displayName: 'Visualizar reporte'
+        condition: always()
+      - task: PublishPipelineArtifact@1
+        displayName: 'Publicar reporte de versión ${{ parameters.version }}'
+        condition: always()
+        inputs:
+          targetPath: $(Build.SourcesDirectory)/artifacts
+          artifact: reporte-version-${{ lower(parameters.version) }}
+      - task: PublishHtmlTab@1
+        displayName: 'Publicar reporte HTML'
+        condition: always()
+        inputs:
+          reportDir: $(Build.SourcesDirectory)/artifacts/version-${{ lower(parameters.version) }}.html
+          tabName: Quality gate ${{ parameters.version }}

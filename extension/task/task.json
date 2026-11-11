@@ -1,0 +1,125 @@
+{
+  "id": "7c1f5a2e-9b44-4d6a-8e31-0a6f3c8d2b17",
+  "name": "PerfGate",
+  "friendlyName": "Performance Quality Gate",
+  "description": "Compara una versión candidata contra producción y falla el pipeline si no cumple los límites.",
+  "author": "cristianca23",
+  "helpMarkDown": "Los resultados pueden ser CSV de JMeter o JSON por línea de `k6 run --out json`. El código de salida 1 deja el pipeline en rojo.",
+  "category": "Utility",
+  "visibility": [
+    "Build",
+    "Release"
+  ],
+  "runsOn": [
+    "Agent",
+    "DeploymentGroup"
+  ],
+  "version": {
+    "Major": 1,
+    "Minor": 0,
+    "Patch": 0
+  },
+  "minimumAgentVersion": "2.144.0",
+  "instanceNameFormat": "Comparar $(candidate)",
+  "inputs": [
+    {
+      "name": "baseline",
+      "type": "filePath",
+      "label": "Resultados de producción",
+      "required": true,
+      "helpMarkDown": "CSV de JMeter o JSON de k6 de la línea base."
+    },
+    {
+      "name": "candidate",
+      "type": "filePath",
+      "label": "Resultados de la candidata",
+      "required": true
+    },
+    {
+      "name": "baselineFormat",
+      "type": "pickList",
+      "label": "Formato de producción",
+      "defaultValue": "jmeter",
+      "options": {
+        "jmeter": "JMeter CSV",
+        "k6": "k6 JSON"
+      }
+    },
+    {
+      "name": "candidateFormat",
+      "type": "pickList",
+      "label": "Formato de la candidata",
+      "defaultValue": "jmeter",
+      "options": {
+        "jmeter": "JMeter CSV",
+        "k6": "k6 JSON"
+      }
+    },
+    {
+      "name": "warmupSeconds",
+      "type": "string",
+      "label": "Segundos de estabilización",
+      "defaultValue": "60",
+      "required": true
+    },
+    {
+      "name": "maxP95RegressionPct",
+      "type": "string",
+      "label": "Aumento máximo del p95 (%)",
+      "defaultValue": "20",
+      "required": true
+    },
+    {
+      "name": "maxErrorIncreasePp",
+      "type": "string",
+      "label": "Aumento máximo de error (puntos)",
+      "defaultValue": "1",
+      "required": true
+    },
+    {
+      "name": "maxErrorRatePct",
+      "type": "string",
+      "label": "Tope de error (%)",
+      "defaultValue": "2",
+      "required": true
+    },
+    {
+      "name": "minSamples",
+      "type": "string",
+      "label": "Mínimo de muestras",
+      "defaultValue": "30",
+      "required": true
+    },
+    {
+      "name": "endpointsJson",
+      "type": "multiLine",
+      "label": "Límites por endpoint",
+      "defaultValue": "{}",
+      "required": false,
+      "helpMarkDown": "Objeto JSON. La clave es el nombre del endpoint y el valor puede redefinir maxP95RegressionPct, maxErrorIncreasePp, maxErrorRatePct y minSamples."
+    },
+    {
+      "name": "report",
+      "type": "filePath",
+      "label": "Reporte Markdown",
+      "required": true
+    },
+    {
+      "name": "htmlReport",
+      "type": "filePath",
+      "label": "Reporte HTML",
+      "required": true
+    }
+  ],
+  "execution": {
+    "Node16": {
+      "target": "index.js"
+    },
+    "Node20_1": {
+      "target": "index.js"
+    },
+    "Node24": {
+      "target": "index.js"
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "manifestVersion": 1,
+  "id": "performance-quality-gate",
+  "name": "Performance Quality Gate",
+  "version": "1.0.0",
+  "publisher": "cristianca23",
+  "public": false,
+  "targets": [
+    {
+      "id": "Microsoft.VisualStudio.Services"
+    }
+  ],
+  "description": "Compara resultados JMeter o k6 de una versión candidata contra producción y deja el pipeline en rojo cuando no pasa.",
+  "categories": [
+    "Azure Pipelines"
+  ],
+  "icons": {
+    "default": "images/icon.png"
+  },
+  "files": [
+    {
+      "path": "task"
+    },
+    {
+      "path": "images/icon.png",
+      "addressable": true
+    }
+  ],
+  "contributions": [
+    {
+      "id": "perf-gate",
+      "type": "ms.vss-distributed-task.task",
+      "targets": [
+        "ms.vss-distributed-task.tasks"
+      ],
+      "properties": {
+        "name": "task"
+      }
+    }
+  ]
+}
