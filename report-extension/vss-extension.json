@@ -2,7 +2,7 @@
   "manifestVersion": 1,
   "id": "performance-quality-report",
   "name": "Performance Quality Report",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "scopes": [
     "vso.build",
     "vso.release"
