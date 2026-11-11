@@ -1,33 +1,4 @@
-name: ${{ parameters.version }}-$(Date:yyyyMMdd)$(Rev:.r)
-
-parameters:
-  - name: version
-    displayName: Cambio a evaluar
-    type: string
-    default: A
-    values:
-      - A
-      - B
-  - name: warmupSeconds
-    displayName: Segundos de estabilización
-    type: number
-    default: 60
-  - name: maxP95RegressionPct
-    displayName: Aumento máximo del p95 frente a producción (%)
-    type: number
-    default: 20
-  - name: maxErrorIncreasePp
-    displayName: Aumento máximo de error (porcentaje)
-    type: number
-    default: 1
-  - name: maxErrorRatePct
-    displayName: Tope de error (%)
-    type: number
-    default: 2
-  - name: minSamples
-    displayName: Mínimo de muestras para el análisis
-    type: number
-    default: 30
+name: validator-$(Date:yyyyMMdd)$(Rev:.r)
 
 trigger:
   - main
@@ -45,39 +16,11 @@ jobs:
           versionSpec: '3.x'
       - script: python -m unittest discover -s tests -v
         displayName: 'Ejecutar pruebas unitarias'
-
-  - job: Evaluate
-    displayName: 'Evaluar versión ${{ parameters.version }}'
-    dependsOn: UnitTests
-    steps:
-      - checkout: self
-      - template: .azuredevops/templates/performance-gate.yml
-        parameters:
-          baseline: data/produccion-actual.csv
-          candidate: data/version-${{ lower(parameters.version) }}.csv
-          report: $(Build.SourcesDirectory)/artifacts/version-${{ lower(parameters.version) }}.md
-          htmlReport: $(Build.SourcesDirectory)/artifacts/version-${{ lower(parameters.version) }}.html
-          warmupSeconds: ${{ parameters.warmupSeconds }}
-          maxP95RegressionPct: ${{ parameters.maxP95RegressionPct }}
-          maxErrorIncreasePp: ${{ parameters.maxErrorIncreasePp }}
-          maxErrorRatePct: ${{ parameters.maxErrorRatePct }}
-          minSamples: ${{ parameters.minSamples }}
       - script: |
-          REPORT="$(Build.SourcesDirectory)/artifacts/version-${{ lower(parameters.version) }}.md"
-          if [ -f "$REPORT" ]; then
-            echo "##vso[task.uploadsummary]$REPORT"
-          fi
-        displayName: 'Visualizar reporte'
-        condition: always()
-      - task: PublishPipelineArtifact@1
-        displayName: 'Publicar reportes de versión ${{ parameters.version }}'
-        condition: always()
-        inputs:
-          targetPath: $(Build.SourcesDirectory)/artifacts
-          artifact: reporte-version-${{ lower(parameters.version) }}
-      - task: PublishHtmlTab@1
-        displayName: 'Publicar reporte HTML'
-        condition: always()
-        inputs:
-          reportDir: $(Build.SourcesDirectory)/artifacts/version-${{ lower(parameters.version) }}.html
-          tabName: Quality gate ${{ parameters.version }}
+          mkdir -p "$(Build.ArtifactStagingDirectory)/validator"
+          cp -R tools data "$(Build.ArtifactStagingDirectory)/validator/"
+          cp perf-gate.json "$(Build.ArtifactStagingDirectory)/validator/"
+        displayName: 'Empaquetar validador'
+      - publish: $(Build.ArtifactStagingDirectory)/validator
+        artifact: validator
+        displayName: 'Publicar artefacto del validador'

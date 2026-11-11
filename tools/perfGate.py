@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from config import apply_default_overrides, read_config
+from config import apply_default_overrides, apply_endpoint_overrides, read_config, read_endpoint_overrides
 from metrics import apply_warmup, metrics
 from readers import load_results, requestSample
 from reports import fmt, html_report, markdown_report
@@ -236,6 +236,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--max-error-rate-pct", type=float, help="Reemplaza defaults.maxErrorRatePct")
     parser.add_argument("--min-samples", type=int, help="Reemplaza defaults.minSamples")
+    parser.add_argument(
+        "--endpoints-file",
+        type=Path,
+        help="JSON con límites por endpoint. Cada clave es el nombre del endpoint.",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -251,6 +256,8 @@ def main(argv: list[str] | None = None) -> int:
                 "minSamples": args.min_samples,
             },
         )
+        if args.endpoints_file:
+            config = apply_endpoint_overrides(config, read_endpoint_overrides(args.endpoints_file))
         warmup_seconds = config["defaults"].get("warmupSeconds", 0)
         _, baseline_excluded = apply_warmup(baseline, warmup_seconds)
         _, candidate_excluded = apply_warmup(candidate, warmup_seconds)

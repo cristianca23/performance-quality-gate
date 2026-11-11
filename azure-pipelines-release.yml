@@ -1,0 +1,105 @@
+name: release-$(cambioAEvaluar)-$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger: none
+pr: none
+
+resources:
+  pipelines:
+    - pipeline: build
+      source: performance-quality-gate
+      trigger: none
+
+variables:
+  cambioAEvaluar: A
+  warmupSeconds: 60
+  maxP95RegressionPct: 20
+  maxErrorIncreasePp: 1
+  maxErrorRatePct: 2
+  minSamples: 30
+  limitesPorEndpoint: |
+    {
+      "POST /pagos": {
+        "maxP95RegressionPct": 20,
+        "maxErrorIncreasePp": 1,
+        "maxErrorRatePct": 2,
+        "minSamples": 30
+      },
+      "POST /transferencias": {
+        "maxP95RegressionPct": 20,
+        "maxErrorIncreasePp": 1,
+        "maxErrorRatePct": 2,
+        "minSamples": 30
+      },
+      "GET /clientes": {
+        "maxP95RegressionPct": 20,
+        "maxErrorIncreasePp": 1,
+        "maxErrorRatePct": 2,
+        "minSamples": 30
+      },
+      "GET /reportes": {
+        "maxP95RegressionPct": 20,
+        "maxErrorIncreasePp": 1,
+        "maxErrorRatePct": 2,
+        "minSamples": 30
+      },
+      "Consultar saldo, cuenta ahorros": {
+        "maxP95RegressionPct": 20,
+        "maxErrorIncreasePp": 1,
+        "maxErrorRatePct": 2,
+        "minSamples": 30
+      }
+    }
+
+stages:
+  - stage: Release
+    displayName: Release del quality gate
+    jobs:
+      - deployment: QualityGate
+        displayName: Evaluar con el validador publicado
+        pool:
+          vmImage: ubuntu-latest
+        environment: quality-gate
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: none
+                - download: build
+                  artifact: validator
+                - script: |
+                    python3 -c "import os; print('##vso[task.setvariable variable=versionKey]' + os.environ['CAMBIO'].strip().lower())"
+                  env:
+                    CAMBIO: $(cambioAEvaluar)
+                  displayName: Leer la versión configurada
+                - template: .azuredevops/templates/performance-gate.yml
+                  parameters:
+                    root: $(Pipeline.Workspace)/build/validator
+                    baseline: data/produccion-actual.csv
+                    candidate: data/version-$(versionKey).csv
+                    report: artifacts/version-$(versionKey).md
+                    htmlReport: artifacts/version-$(versionKey).html
+                    warmupSeconds: $(warmupSeconds)
+                    maxP95RegressionPct: $(maxP95RegressionPct)
+                    maxErrorIncreasePp: $(maxErrorIncreasePp)
+                    maxErrorRatePct: $(maxErrorRatePct)
+                    minSamples: $(minSamples)
+                    endpointsJson: $(limitesPorEndpoint)
+                - script: |
+                    REPORT="$(Pipeline.Workspace)/build/validator/artifacts/version-$(versionKey).md"
+                    if [ -f "$REPORT" ]; then
+                      echo "##vso[task.uploadsummary]$REPORT"
+                    fi
+                  displayName: Visualizar reporte
+                  condition: always()
+                - task: PublishPipelineArtifact@1
+                  displayName: Publicar reporte
+                  condition: always()
+                  inputs:
+                    targetPath: $(Pipeline.Workspace)/build/validator/artifacts
+                    artifact: reporte-version-$(versionKey)
+                - task: PublishHtmlTab@1
+                  displayName: Publicar reporte HTML
+                  condition: always()
+                  inputs:
+                    reportDir: $(Pipeline.Workspace)/build/validator/artifacts/version-$(versionKey).html
+                    tabName: Quality gate $(cambioAEvaluar)

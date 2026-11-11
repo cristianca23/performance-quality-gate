@@ -1,4 +1,7 @@
 parameters:
+  - name: root
+    type: string
+    default: $(Build.SourcesDirectory)
   - name: baseline
     type: string
   - name: candidate
@@ -20,15 +23,18 @@ parameters:
       - jmeter
       - k6
   - name: warmupSeconds
-    type: number
+    type: string
   - name: maxP95RegressionPct
-    type: number
+    type: string
   - name: maxErrorIncreasePp
-    type: number
+    type: string
   - name: maxErrorRatePct
-    type: number
+    type: string
   - name: minSamples
-    type: number
+    type: string
+  - name: endpointsJson
+    type: string
+    default: '{}'
 
 steps:
   - task: UsePythonVersion@0
@@ -37,17 +43,43 @@ steps:
     displayName: 'Seleccionar Python'
 
   - script: |
+      cat > "$(Agent.TempDirectory)/endpoint-limits.json" <<'EOF'
+      ${{ parameters.endpointsJson }}
+      EOF
+    displayName: 'Guardar límites por endpoint'
+
+  - script: |
+      python3 - <<'PY'
+      import os
+      from pathlib import Path
+      path = Path("perf-gate.json")
+      text = path.read_text(encoding="utf-8")
+      keys = ("warmupSeconds", "maxP95RegressionPct", "maxErrorIncreasePp", "maxErrorRatePct", "minSamples")
+      missing = [key for key in keys if "#{" + key + "}#" not in text]
+      if missing:
+          raise SystemExit("Faltan tokens en perf-gate.json: " + ", ".join(missing))
+      for key in keys:
+          text = text.replace("#{" + key + "}#", os.environ[key])
+      path.write_text(text, encoding="utf-8")
+      PY
+    workingDirectory: ${{ parameters.root }}
+    env:
+      warmupSeconds: ${{ parameters.warmupSeconds }}
+      maxP95RegressionPct: ${{ parameters.maxP95RegressionPct }}
+      maxErrorIncreasePp: ${{ parameters.maxErrorIncreasePp }}
+      maxErrorRatePct: ${{ parameters.maxErrorRatePct }}
+      minSamples: ${{ parameters.minSamples }}
+    displayName: 'Reemplazar límites en perf-gate.json'
+
+  - script: |
       python tools/perfGate.py \
         --baseline "${{ parameters.baseline }}" \
         --candidate "${{ parameters.candidate }}" \
         --baseline-format "${{ parameters.baselineFormat }}" \
         --candidate-format "${{ parameters.candidateFormat }}" \
         --config perf-gate.json \
-        --warmup-seconds "${{ parameters.warmupSeconds }}" \
-        --max-p95-regression-pct "${{ parameters.maxP95RegressionPct }}" \
-        --max-error-increase-pp "${{ parameters.maxErrorIncreasePp }}" \
-        --max-error-rate-pct "${{ parameters.maxErrorRatePct }}" \
-        --min-samples "${{ parameters.minSamples }}" \
+        --endpoints-file "$(Agent.TempDirectory)/endpoint-limits.json" \
         --report "${{ parameters.report }}" \
         --html-report "${{ parameters.htmlReport }}"
+    workingDirectory: ${{ parameters.root }}
     displayName: 'Comparar performance contra producción'
