@@ -70,6 +70,12 @@ Ejemplo de límites por endpoint:
 }
 ```
 
+## Uso de IA
+
+Me apalanqué de la IA para construir la extensión, con base en la documentación de Azure DevOps [Package, publish, and install extensions](https://learn.microsoft.com/en-us/azure/devops/extend/publish/overview?view=azure-devops). De esa guía salen el manifiesto `vss-extension.json`, el empaquetado con TFX, la publicación en el Visual Studio Marketplace y la pestaña **Reports** del release.
+
+También me apoyé en la IA para revisar y probar en local el archivo principal, `tools/perfGate.py`, con las versiones A y B contra producción.
+
 ## Empaquetar las extensiones
 
 La creación de las extensiones se basa en [Package, publish, and install extensions](https://learn.microsoft.com/en-us/azure/devops/extend/publish/overview?view=azure-devops): manifiesto `vss-extension.json`, empaquetado con TFX, publicación en el Visual Studio Marketplace y compartido con la organización antes de instalarlas.
