@@ -1,6 +1,6 @@
 # performance-quality-gate
 
-Compara una versión candidata contra producción, endpoint por endpoint, con resultados JMeter CSV o k6 JSON. El programa es `tools/perfGate.py`. En Azure DevOps la misma lógica corre como la task `PerfGate@1`.
+Compara una versión candidata contra producción, endpoint por endpoint, con resultados JMeter CSV. El programa es `tools/perfGate.py`. En Azure DevOps la misma lógica corre como la task `PerfGate@1`.
 
 Analísis de los datos:
 
@@ -52,7 +52,7 @@ Argumentos:
 | Argumento | Uso |
 |---|---|
 | `--baseline`, `--candidate` | Archivos de producción y de la candidata. Obligatorios. |
-| `--baseline-format`, `--candidate-format` | `jmeter` (CSV) o `k6` (JSON). Por defecto, `jmeter`. |
+| `--baseline-format`, `--candidate-format` | `jmeter` (CSV) o `k6` (futura mejora y estabilización) (JSON). Por defecto, `jmeter`. |
 | `--config` | JSON de límites. Obligatorio. |
 | `--report`, `--html-report` | Rutas de salida. Opcionales. |
 | `--warmup-seconds` | Pisa `warmupSeconds`. |
@@ -72,7 +72,7 @@ Ejemplo de límites por endpoint:
 
 ## Empaquetar las extensiones
 
-La creación de las extensiones se basa en [Package, publish, and install extensions](https://learn.microsoft.com/en-us/azure/devops/extend/publish/overview?view=azure-devops): manifiesto `vss-extension.json`, empaquetado con TFX, publicación en el Visual Studio Marketplace y compartir con la organización antes de instalarlas.
+La creación de las extensiones se basa en [Package, publish, and install extensions](https://learn.microsoft.com/en-us/azure/devops/extend/publish/overview?view=azure-devops): manifiesto `vss-extension.json`, empaquetado con TFX, publicación en el Visual Studio Marketplace y compartido con la organización antes de instalarlas.
 
 Hay dos extensiones, las dos con publisher `cristianca23`:
 
@@ -91,7 +91,7 @@ Necesita Node.js, porque llama a `tfx-cli` 0.21.1. Para dejar solo la copia, sin
 python3 tools/packageExtension.py --stage-only --output dist/staging
 ```
 
-Publicar y compartir con la organización:
+Para publicar y compartir con la organización:
 
 ```bash
 npx tfx-cli@0.21.1 extension publish \
