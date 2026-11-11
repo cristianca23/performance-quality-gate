@@ -51,6 +51,8 @@ function endpointFile() {
   return file;
 }
 
+const reportPath = requireInput("report");
+const htmlPath = requireInput("htmlReport");
 const tool = path.join(__dirname, "tools", "perfGate.py");
 const args = [
   tool,
@@ -75,9 +77,9 @@ const args = [
   "--min-samples",
   requireInput("minSamples"),
   "--report",
-  requireInput("report"),
+  reportPath,
   "--html-report",
-  requireInput("htmlReport"),
+  htmlPath,
 ];
 
 const endpoints = endpointFile();
@@ -85,7 +87,26 @@ if (endpoints) {
   args.push("--endpoints-file", endpoints);
 }
 
+function publishReport(reportPath, htmlPath) {
+  if (reportPath && fs.existsSync(reportPath)) {
+    console.log("##vso[task.uploadsummary]" + reportPath);
+    console.log("Reporte Markdown publicado en el resumen.");
+  } else {
+    console.log("No se encontró el reporte Markdown en " + reportPath + ".");
+  }
+  if (htmlPath && fs.existsSync(htmlPath)) {
+    const name = path.basename(htmlPath).replace(/[;\r\n]/g, "");
+    console.log(
+      "##vso[task.addattachment type=perf-gate-report;name=" + name + ";]" + htmlPath
+    );
+    console.log("Reporte HTML adjunto para Performance Quality Report: " + htmlPath);
+  } else {
+    console.log("No se encontró el reporte HTML en " + htmlPath + ".");
+  }
+}
+
 const result = spawnSync(pythonCommand(), args, { stdio: "inherit" });
+publishReport(reportPath, htmlPath);
 if (result.error) {
   console.error(result.error.message);
   process.exit(1);

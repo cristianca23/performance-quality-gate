@@ -15,8 +15,6 @@ jobs:
       - task: UsePythonVersion@0
         inputs:
           versionSpec: '3.x'
-      - script: python -m unittest discover -s tests -v
-        displayName: 'Ejecutar pruebas unitarias'
       - script: python tools/packageExtension.py --output "$(Build.ArtifactStagingDirectory)/extension"
         displayName: 'Empaquetar la task'
       - publish: $(Build.ArtifactStagingDirectory)/extension

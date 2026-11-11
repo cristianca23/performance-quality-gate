@@ -13,6 +13,9 @@ SOURCE = ROOT / "extension"
 TOOL_SOURCES = ("perfGate.py", "config.py", "metrics.py", "readers.py", "reports.py")
 
 
+REPORT_SOURCE = ROOT / "report-extension"
+
+
 def stage(destination: Path) -> None:
     if destination.exists():
         shutil.rmtree(destination)
@@ -23,9 +26,21 @@ def stage(destination: Path) -> None:
     shutil.copytree(SOURCE / "images", destination / "images")
     for name in ("task.json", "index.js"):
         shutil.copy(SOURCE / "task" / name, task / name)
+    shutil.copy(SOURCE / "images" / "rapido.png", task / "icon.png")
     for name in TOOL_SOURCES:
         shutil.copy(ROOT / "tools" / name, tools / name)
     shutil.copy(ROOT / "perf-gate.json", task / "perf-gate.json")
+
+
+def stage_report(destination: Path) -> None:
+    if destination.exists():
+        shutil.rmtree(destination)
+    destination.mkdir(parents=True)
+    shutil.copy(REPORT_SOURCE / "vss-extension.json", destination / "vss-extension.json")
+    shutil.copytree(REPORT_SOURCE / "images", destination / "images")
+    shutil.copytree(REPORT_SOURCE / "tab", destination / "tab")
+    shutil.copytree(REPORT_SOURCE / "task", destination / "task")
+    shutil.copy(REPORT_SOURCE / "images" / "documento.png", destination / "task" / "icon.png")
 
 
 def create_vsix(stage_dir: Path, output: Path) -> Path:
@@ -44,9 +59,9 @@ def create_vsix(stage_dir: Path, output: Path) -> Path:
     result = subprocess.run(command, cwd=stage_dir, check=False)
     if result.returncode != 0:
         raise SystemExit(result.returncode)
-    packages = sorted(set(stage_dir.rglob("*.vsix")) | set(output.glob("*.vsix")))
+    packages = sorted(stage_dir.rglob("*.vsix"))
     if not packages:
-        raise SystemExit(f"tfx no dejó un .vsix en {output}.")
+        raise SystemExit(f"tfx no dejó un .vsix en {stage_dir}.")
     package = packages[-1]
     target = output / package.name
     if package.resolve() != target.resolve():
@@ -72,7 +87,11 @@ def main(argv: list[str] | None = None) -> int:
     staging = args.output / "staging"
     stage(staging)
     package = create_vsix(staging, args.output)
+    report_staging = args.output / "staging-report"
+    stage_report(report_staging)
+    report = create_vsix(report_staging, args.output)
     print(package)
+    print(report)
     return 0
 
 

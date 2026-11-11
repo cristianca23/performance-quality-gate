@@ -2,7 +2,11 @@
   "manifestVersion": 1,
   "id": "performance-quality-gate",
   "name": "Performance Quality Gate",
-  "version": "1.0.1",
+  "version": "1.0.6",
+  "scopes": [
+    "vso.build",
+    "vso.release"
+  ],
   "publisher": "cristianca23",
   "public": false,
   "targets": [
@@ -15,14 +19,14 @@
     "Azure Pipelines"
   ],
   "icons": {
-    "default": "images/icon.png"
+    "default": "images/rapido.png"
   },
   "files": [
     {
       "path": "task"
     },
     {
-      "path": "images/icon.png",
+      "path": "images/rapido.png",
       "addressable": true
     }
   ],

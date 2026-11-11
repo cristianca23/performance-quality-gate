@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "esbuild src/tab.js --bundle --outfile=tab/report.js --format=iife --platform=browser --target=es2018"
+  },
+  "devDependencies": {
+    "azure-devops-extension-api": "^5.280.1",
+    "azure-devops-extension-sdk": "^5.0.0",
+    "esbuild": "^0.28.2"
+  }
+}

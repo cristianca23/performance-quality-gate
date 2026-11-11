@@ -1,0 +1,53 @@
+{
+  "id": "afa798a9-bb1a-4594-8387-04c9c8f4ed27",
+  "name": "PublishHtmlReport",
+  "friendlyName": "Publish HTML Report",
+  "description": "Publica un HTML y lo muestra en la pestaña Reports de la etapa.",
+  "helpMarkDown": "Indica el nombre del reporte y la ruta del HTML. Acepta un archivo o un comodín, por ejemplo `**/*.html`.",
+  "category": "Utility",
+  "visibility": [
+    "Build",
+    "Release"
+  ],
+  "runsOn": [
+    "Agent",
+    "DeploymentGroup"
+  ],
+  "author": "cristianca23",
+  "version": {
+    "Major": 1,
+    "Minor": 0,
+    "Patch": 0
+  },
+  "minimumAgentVersion": "2.144.0",
+  "instanceNameFormat": "Publish $(reportName)",
+  "inputs": [
+    {
+      "name": "reportName",
+      "type": "string",
+      "label": "Report Name",
+      "defaultValue": "Quality gate",
+      "required": true,
+      "helpMarkDown": "Nombre que se ve dentro de la pestaña Reports."
+    },
+    {
+      "name": "htmlPath",
+      "type": "string",
+      "label": "Path of the artifact *.html",
+      "defaultValue": "**/artifacts/*.html",
+      "required": true,
+      "helpMarkDown": "Ruta del HTML generado por el quality gate. Puede ser el archivo exacto o un comodín como `**/artifacts/*.html`."
+    }
+  ],
+  "execution": {
+    "Node16": {
+      "target": "index.js"
+    },
+    "Node20_1": {
+      "target": "index.js"
+    },
+    "Node24": {
+      "target": "index.js"
+    }
+  }
+}
